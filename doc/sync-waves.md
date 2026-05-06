@@ -11,9 +11,10 @@ ArgoCD deploys components in a specific order. Components with lower numbers are
 | 1 | `-6` | `cert-manager` | Manages TLS certificates (HTTPS) for Vault and other services |
 | 2 | `-5` | `vault` | Deploys HashiCorp Vault with TLS enabled |
 | 3 | `-4` | `vault-unseal-job` | Automatically unseals Vault using keys generated during bootstrap |
-| 4 | `-3` | `vault-config` | Configures Vault: enables auth methods, policies, and roles (handled via bootstrap/Job) |
-| 5 | `-2` | `eso-sync` | Installs External Secrets Operator and connects it to Vault |
-| 6 | `-1` | `tailscale` | Deploys Tailscale operator and creates secure Ingresses for Vault and ArgoCD |
+| 4 | `-3` | `vault-config` | Configures Vault: auth methods, policies, roles |
+| 5 | `-3` | `eso-operator` | Installs the External Secrets Operator and its CRDs |
+| 6 | `-2` | `eso-config` | Creates ClusterSecretStore and ExternalSecrets (connects to Vault) |
+| 7 | `-1` | `tailscale` | Deploys Tailscale operator and secure Ingresses |
 
 ## How It Works (Step-by-Step)
 
@@ -25,9 +26,12 @@ ArgoCD deploys components in a specific order. Components with lower numbers are
 
 4. **Vault Config** (`-3`): Handles the internal configuration of Vault, like enabling Kubernetes authentication and setting up permissions. This is done during the bootstrap process or via a configurator job.
 
-5. **ESO** (`-2`): External Secrets Operator reads secrets from Vault and syncs them into Kubernetes. It creates the Tailscale OAuth credentials secret needed for the next step.
+5. **ESO Operator** (`-3`): Installs the External Secrets Operator. This needs to happen before we try to create any custom resources like ClusterSecretStores.
 
-6. **Tailscale** (`-1`): Installs the Tailscale operator using the credentials synced by ESO. It also creates the **Ingress** resources that allow you to access `https://vault` or `https://argocd` from your Tailscale network.
+6. **ESO Config** (`-2`): Creates the `ClusterSecretStore` (connecting to Vault) and `ExternalSecrets`. This is where the actual syncing of secrets starts.
+
+7. **Tailscale** (`-1`): Installs the Tailscale operator using the credentials synced by ESO.
+ It also creates the **Ingress** resources that allow you to access `https://vault` or `https://argocd` from your Tailscale network.
 
 ## Ingress Management
 

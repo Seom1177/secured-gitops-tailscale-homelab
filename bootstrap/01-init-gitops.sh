@@ -7,9 +7,10 @@ VAULT_VERSION=0.32.0
 helm repo add argo https://argoproj.github.io/argo-helm
 helm repo update
 kubectl create namespace argocd  --dry-run=client -o yaml | kubectl apply -f -
-helm upgrade --install argocd https://argoproj.github.io/argo-helm \
+helm upgrade --install argocd argo/argo-cd \
+  --version 9.5.11 \
   --namespace argocd \
-  -f platform/argocd/values.yaml 
+  -f platform/argocd/values.yaml
 
 # Wait for ArgoCD deployment to be created
 echo "Waiting for ArgoCD deployment to be created..."
@@ -151,7 +152,7 @@ kubectl exec -n vault vault-app-0 -- /bin/sh \
 # seed secrets for tailscale auth
 if [ -z "$TS_CLIENT_ID" ] || [ -z "$TS_CLIENT_SECRET" ]; then
     read -p "Type Tailscale Client ID: " TS_CLIENT_ID
-    read -sp "Type Tailscale Client Secret: " TS_CLIENT_SECRET
+    read -sp "Type Tailscale Client Secret (your input will not be shown): " TS_CLIENT_SECRET
     echo ""
 fi
 

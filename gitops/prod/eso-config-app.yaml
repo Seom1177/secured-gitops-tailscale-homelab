@@ -1,16 +1,16 @@
 apiVersion: argoproj.io/v1alpha1
 kind: Application
 metadata:
-  name: eso-app
+  name: eso-config-app
   namespace: argocd
   annotations:
-    argocd.argoproj.io/sync-wave: "-3"
+    argocd.argoproj.io/sync-wave: "-2"
 spec:
   project: default
   source:
     repoURL: https://github.com/Seom1177/argocd-gitops-homelab.git
     targetRevision: HEAD
-    path: platform/external-secret
+    path: platform/external-secrets-config
   destination:
     server: https://kubernetes.default.svc
     namespace: external-secrets
@@ -21,10 +21,3 @@ spec:
     syncOptions:
     - CreateNamespace=true
     - ServerSideApply=true
-  ignoreDifferences:
-  - group: external-secrets.io
-    kind: ExternalSecret
-    jsonPointers:
-    - /spec/data/*/remoteRef/conversionStrategy
-    - /spec/data/*/remoteRef/decodingStrategy
-    - /spec/data/*/remoteRef/metadataPolicy
