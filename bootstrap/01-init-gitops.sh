@@ -42,14 +42,6 @@ chmod +x infra/init-infra.sh
 # Apply cert-manager Issuer and Certificate
 # Install cert-manager
 echo "Installing cert-manager..."
-# kubectl create namespace cert-manager --dry-run=client -o yaml | kubectl apply -f -
-# helm repo add jetstack https://charts.jetstack.io
-# helm repo update
-# helm upgrade --install cert-manager jetstack/cert-manager \
-#   --namespace cert-manager \
-#   --version $CERT_MANAGER_VERSION \
-#   --set crds.enabled=true \
-#   --set global.leaderElection.namespace=cert-manager
 kubectl apply -f gitops/prod/cert-manager-app.yaml
 
 # Wait for Cert-Manager ArgoCD App to be Synced
@@ -130,14 +122,31 @@ kubectl get secret vault-unseal-keys -n vault &>/dev/null || kubectl create secr
 
 # Unseal Vault
 echo "Unsealing Vault..."
-kubectl exec -n vault vault-app-0 -- vault operator unseal -address=https://127.0.0.1:8200 -ca-cert=/vault/userconfig/vault-tls/ca.crt -tls-server-name=vault $KEY1
-kubectl exec -n vault vault-app-0 -- vault operator unseal -address=https://127.0.0.1:8200 -ca-cert=/vault/userconfig/vault-tls/ca.crt -tls-server-name=vault $KEY2
-kubectl exec -n vault vault-app-0 -- vault operator unseal -address=https://127.0.0.1:8200 -ca-cert=/vault/userconfig/vault-tls/ca.crt -tls-server-name=vault $KEY3
+kubectl exec -n vault vault-app-0 -- vault operator unseal \
+    -address=https://127.0.0.1:8200 \
+    -ca-cert=/vault/userconfig/vault-tls/ca.crt \
+    -tls-server-name=vault \
+    $KEY1
+kubectl exec -n vault vault-app-0 -- vault operator unseal \
+    -address=https://127.0.0.1:8200 \
+    -ca-cert=/vault/userconfig/vault-tls/ca.crt \
+    -tls-server-name=vault \
+    $KEY2
+kubectl exec -n vault vault-app-0 -- vault operator unseal \
+    -address=https://127.0.0.1:8200 \
+    -ca-cert=/vault/userconfig/vault-tls/ca.crt \
+    -tls-server-name=vault \
+    $KEY3
 echo "Vault unsealed successfully."
 
 # Enable kv-v2 secrets engine at path "secret"
 echo "Enabling kv-v2 secrets engine at path 'secret'..."
-kubectl exec -n vault vault-app-0 -- /bin/sh -c "export VAULT_TOKEN=$ROOT_TOKEN; vault secrets enable -address=https://127.0.0.1:8200 -ca-cert=/vault/userconfig/vault-tls/ca.crt -tls-server-name=vault -path=secret kv-v2"
+kubectl exec -n vault vault-app-0 -- /bin/sh \
+    -c "export VAULT_TOKEN=$ROOT_TOKEN; vault secrets enable \
+    -address=https://127.0.0.1:8200 \
+    -ca-cert=/vault/userconfig/vault-tls/ca.crt \
+    -tls-server-name=vault \
+    -path=secret kv-v2"
 
 # seed secrets for tailscale auth
 if [ -z "$TS_CLIENT_ID" ] || [ -z "$TS_CLIENT_SECRET" ]; then
@@ -146,17 +155,19 @@ if [ -z "$TS_CLIENT_ID" ] || [ -z "$TS_CLIENT_SECRET" ]; then
     echo ""
 fi
 
-kubectl exec -n vault vault-app-0 -- /bin/sh -c "export VAULT_TOKEN=$ROOT_TOKEN; vault kv put -address=https://127.0.0.1:8200 -ca-cert=/vault/userconfig/vault-tls/ca.crt -tls-server-name=vault secret/tailscale/auth client_id=$TS_CLIENT_ID client_secret=$TS_CLIENT_SECRET"
-
+kubectl exec -n vault vault-app-0 -- /bin/sh \
+    -c "export VAULT_TOKEN=$ROOT_TOKEN; vault kv put \
+        -address=https://127.0.0.1:8200 \
+        -ca-cert=/vault/userconfig/vault-tls/ca.crt \
+        -tls-server-name=vault \
+        secret/tailscale/auth \
+        client_id=$TS_CLIENT_ID \
+        client_secret=$TS_CLIENT_SECRET"
 
 # Deploy ArgoCD via its own Application manifest (GitOps style)
 # ArgoCD will manage its own versioning via platform/argocd/ chart
 echo "Initializing ArgoCD via GitOps..."
 kubectl apply -f gitops/root-prod-app.yaml
-
-# Extract the initial admin password for ArgoCD
-ARGOCD_PASSWORD=$(kubectl -n argocd get secret argocd-initial-admin-secret -o jsonpath="{.data.password}" | base64 -d)
-echo "ArgoCD initial admin password: $ARGOCD_PASSWORD"
 
 # Print the root token for you to save in your password manager
 echo "Save this in your password manager:"
@@ -167,6 +178,11 @@ echo "Key 4: $KEY4"
 echo "Key 5: $KEY5"
 echo "Root Token (Login token): $ROOT_TOKEN"
 
+# Extract the initial admin password for ArgoCD
+ARGOCD_PASSWORD=$(kubectl -n argocd get secret argocd-initial-admin-secret -o jsonpath="{.data.password}" | base64 -d)
+echo "ArgoCD initial admin password: $ARGOCD_PASSWORD"
+
 # enter to UI
 echo "Run: kubectl port-forward svc/vault -n vault 8200:8200"
+echo "Run: kubectl port-forward svc/argocd-server -n argocd 8080:443"
 echo "Check doc/secrets-structure.md for more info, you maybe need configure more secrets"

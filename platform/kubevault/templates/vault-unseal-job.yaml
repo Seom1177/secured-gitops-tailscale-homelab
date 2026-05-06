@@ -5,7 +5,7 @@ metadata:
   name: vault-unseal-job
   namespace: vault
   annotations:
-    argocd.argoproj.io/sync-wave: "-4"
+    argocd.argoproj.io/sync-wave: "-3"
 ---
 apiVersion: batch/v1
 kind: Job
@@ -13,7 +13,7 @@ metadata:
   name: vault-unseal-job
   namespace: vault
   annotations:
-    argocd.argoproj.io/sync-wave: "-4"
+    argocd.argoproj.io/sync-wave: "-3"
     argocd.argoproj.io/hook-delete-policy: HookSucceeded
 spec:
   template:
