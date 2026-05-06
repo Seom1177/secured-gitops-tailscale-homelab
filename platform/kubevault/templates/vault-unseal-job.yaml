@@ -4,6 +4,8 @@ kind: ServiceAccount
 metadata:
   name: vault-unseal-job
   namespace: vault
+  annotations:
+    argocd.argoproj.io/sync-wave: "-4"
 ---
 apiVersion: batch/v1
 kind: Job
