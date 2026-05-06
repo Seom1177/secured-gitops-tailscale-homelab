@@ -1,7 +1,7 @@
 apiVersion: argoproj.io/v1alpha1
 kind: Application
 metadata:
-  name: argocd-sync
+  name: argocd-app
   namespace: argocd
   annotations:
     argocd.argoproj.io/sync-wave: "-2"
@@ -23,3 +23,6 @@ spec:
       selfHeal: true
     syncOptions:
     - CreateNamespace=true
+    - Replace=true
+    - ServerSideApply=true
+    - Retry=true
