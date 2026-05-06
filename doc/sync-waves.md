@@ -1,29 +1,53 @@
-# Sync Waves
+# Sync Waves (Installation Order)
 
-ArgoCD sync waves control the order of resource creation. Lower numbers deploy first. Resources within the same wave are created in parallel.
+ArgoCD deploys components in a specific order. Components with lower numbers are deployed first. Resources within the same wave are created in parallel.
 
-## Current Configuration
+> **Why order matters**: Some components depend on others being ready. For example, you can't connect Tailscale to Vault if Vault hasn't been initialized yet.
 
-| Order | Sync-wave | Component | Description |
-|-------|-----------|-----------|-------------|
-| 1 | `-6` | `cert-manager` | Manages TLS certificates via cert-manager.io |
-| 2 | `-5` | `vault` (chart) | Deploys Vault using HashiCorp Helm chart |
-| 3 | `-4` | `vault-unseal-job` | Unseals Vault using keys from `vault-unseal-keys` secret |
-| 4 | `-3` | `kubevault` | Configures Vault via CRDs: SecretEngine, VaultPolicy, VaultPolicyBinding |
-| 5 | `-2` | `eso-sync` | Installs External Secrets Operator + creates `ClusterSecretStore` and `ExternalSecret` |
-| 6 | `-1` | `tailscale-operator` | Deploys Tailscale operator using credentials from Vault via ESO |
+## Current Order
 
-## How It Works
+| Step | Wave | Component | What it does |
+|------|------|-----------|--------------|
+| 1 | `-6` | `cert-manager` | Manages TLS certificates (HTTPS) for Vault and other services |
+| 2 | `-5` | `vault` | Deploys HashiCorp Vault with TLS enabled |
+| 3 | `-4` | `vault-unseal-job` | Automatically unseals Vault using keys generated during bootstrap |
+| 4 | `-3` | `kubevault` | Configures Vault: enables secret engines, policies, and roles |
+| 5 | `-2` | `eso-sync` | Installs External Secrets Operator and connects it to Vault |
+| 6 | `-1` | `tailscale` | Deploys Tailscale operator and creates secure Ingresses for Vault and ArgoCD |
 
-1. **Cert-Manager** (`-6`): Manages TLS certificates (Vault TLS, etc.) using cert-manager.io
-2. **Vault** (`-5`): Deployed first via HashiCorp Helm chart
-3. **Vault Unseal** (`-4`): Job that unseals Vault using the keys generated during `01-vault-init.sh`
-4. **KubeVault** (`-3`): Configures Vault (KV engine, policies, roles) via CRDs
-5. **ESO** (`-2`): External Secrets Operator reads from Vault using `ClusterSecretStore` (path: `secret/`)
-6. **Tailscale** (`-1`): Uses the `operator-oauth` secret created by ESO
+## How It Works (Step-by-Step)
+
+1. **cert-manager** (`-6`): Before Vault starts, we need certificates. cert-manager generates them and saves them into a Kubernetes Secret called `vault-tls`.
+
+2. **Vault** (`-5`): Installs with TLS enabled. It reads the certificate from the secret and starts listening on HTTPS. It starts in a "sealed" state, which is normal for security.
+
+3. **Vault Unseal** (`-4`): A one-time Kubernetes Job. it takes the unseal keys stored in the `vault-unseal-keys` secret (created by the bootstrap script) and unseals Vault so it can be used.
+
+4. **KubeVault** (`-3`): Handles the internal configuration of Vault, like enabling the KV engine and setting up permissions.
+
+5. **ESO** (`-2`): External Secrets Operator reads secrets from Vault and syncs them into Kubernetes. It creates the Tailscale OAuth credentials secret needed for the next step.
+
+6. **Tailscale** (`-1`): Installs the Tailscale operator using the credentials synced by ESO. It also creates the **Ingress** resources that allow you to access `https://vault` or `https://argocd` from your Tailscale network.
+
+## Ingress Management
+
+To avoid circular dependencies, all Tailscale-managed access is centralized in `platform/tailscale`. This ensures that secure access points are only created once the Tailscale operator is fully ready to handle them.
 
 ## Bootstrap Flow
 
+The `01-init-gitops.sh` script is run **only once** when setting up the cluster for the first time. It performs the following:
+
 ```bash
-# 1. Initialize Vault (installs Vault + creates unseal keys)
-./bootstrap/01-vault-init.sh
+# Initialize the cluster and ArgoCD
+./bootstrap/01-init-gitops.sh
+```
+
+The script:
+- Installs ArgoCD
+- Installs cert-manager (so it's ready before Vault)
+- Applies the Vault Application in ArgoCD
+- Waits for the TLS certificate to be ready
+- Initializes Vault and saves unseal keys as a Kubernetes Secret
+- Unseals Vault
+- Enables the secrets engine and seeds Tailscale credentials
+- Applies the root Application (which manages everything else via GitOps)

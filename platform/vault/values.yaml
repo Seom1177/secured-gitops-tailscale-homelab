@@ -80,9 +80,10 @@ vault:
 
   ui:
     enabled: true
-    serviceType: LoadBalancer
+    serviceType: ClusterIP
 
-# Custom templates values
+# The Tailscale Ingress resource has sync-wave: "-1" annotation in its template.
+# ArgoCD applies it last (after Tailscale operator is ready), even within this Application.
 tailscale:
   enabled: true
 

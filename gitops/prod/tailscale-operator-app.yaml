@@ -8,24 +8,12 @@ metadata:
 spec:
   project: default
   source:
-    chart: tailscale-operator
-    repoURL: https://pkgs.tailscale.com/helmcharts
-    targetRevision: 1.96.5
+    repoURL: https://github.com/Seom1177/argocd-gitops-homelab.git
+    targetRevision: HEAD
+    path: platform/tailscale
     helm:
-      releaseName: tailscale-operator
-      values: |
-        tailscale-operator:
-          oauth:
-            clientID:
-              valueFrom:
-                secretKeyRef:
-                  name: operator-oauth
-                  key: client_id
-            clientSecret:
-              valueFrom:
-                secretKeyRef:
-                  name: operator-oauth
-                  key: client_secret
+      valueFiles:
+        - values.yaml
   destination:
     server: https://kubernetes.default.svc
     namespace: tailscale
@@ -35,3 +23,4 @@ spec:
       selfHeal: true
     syncOptions:
     - CreateNamespace=true
+    - ServerSideApply=true

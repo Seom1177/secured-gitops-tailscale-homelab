@@ -106,7 +106,6 @@ kubectl wait --for=jsonpath='{.status.phase}'=Running pod/vault-app-0 -n vault -
 # Init Vault
 INIT_OUTPUT=$(kubectl exec -n vault vault-app-0 -- vault operator init \
     -address=https://127.0.0.1:8200 \
-    -tls-skip-verify \
     -format=json)
 
 # Extract the unseal keys and root token from the output
@@ -129,14 +128,14 @@ kubectl get secret vault-unseal-keys -n vault &>/dev/null || kubectl create secr
 
 # Unseal Vault
 echo "Unsealing Vault..."
-kubectl exec -n vault vault-app-0 -- vault operator unseal -address=https://127.0.0.1:8200 -tls-skip-verify $KEY1
-kubectl exec -n vault vault-app-0 -- vault operator unseal -address=https://127.0.0.1:8200 -tls-skip-verify $KEY2
-kubectl exec -n vault vault-app-0 -- vault operator unseal -address=https://127.0.0.1:8200 -tls-skip-verify $KEY3
+kubectl exec -n vault vault-app-0 -- vault operator unseal -address=https://127.0.0.1:8200 $KEY1
+kubectl exec -n vault vault-app-0 -- vault operator unseal -address=https://127.0.0.1:8200 $KEY2
+kubectl exec -n vault vault-app-0 -- vault operator unseal -address=https://127.0.0.1:8200 $KEY3
 echo "Vault unsealed successfully."
 
 # Enable kv-v2 secrets engine at path "secret"
 echo "Enabling kv-v2 secrets engine at path 'secret'..."
-kubectl exec -n vault vault-app-0 -- /bin/sh -c "export VAULT_TOKEN=$ROOT_TOKEN; vault secrets enable -address=https://127.0.0.1:8200 -tls-skip-verify -path=secret kv-v2"
+kubectl exec -n vault vault-app-0 -- /bin/sh -c "export VAULT_TOKEN=$ROOT_TOKEN; vault secrets enable -address=https://127.0.0.1:8200 -path=secret kv-v2"
 
 # seed secrets for tailscale auth
 if [ -z "$TS_CLIENT_ID" ] || [ -z "$TS_CLIENT_SECRET" ]; then

@@ -1,0 +1,24 @@
+# tailscale-operator subchart values
+tailscale-operator:
+  enabled: true
+  oauth:
+    clientID:
+      valueFrom:
+        secretKeyRef:
+          name: operator-oauth
+          key: client_id
+    clientSecret:
+      valueFrom:
+        secretKeyRef:
+          name: operator-oauth
+          key: client_secret
+
+# Ingress toggles for services to be exposed via Tailscale
+argocd:
+  enabled: true
+
+vault:
+  enabled: true
+
+nginx:
+  enabled: false

@@ -1,9 +1,16 @@
-{{- if .Values.tailscale.enabled }}
+{{- if .Values.nginx.enabled }}
 apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
-  name: vault
+  name: nginx
+  # annotations:
+  #   tailscale.com/funnel: "true"
 spec:
+  # defaultBackend:
+  #   service:
+  #     name: nginx
+  #     port:
+  #       number: 80
   ingressClassName: tailscale
   rules:
     - http:
@@ -12,10 +19,10 @@ spec:
             pathType: Prefix
             backend:
               service:
-                name: vault
+                name: nginx
                 port:
-                  number: 443
+                  number: 80
   tls:
   - hosts:
-    - vault
+    - nginx
 {{- end }}
