@@ -7,7 +7,7 @@ VAULT_VERSION=0.32.0
 helm repo add argo https://argoproj.github.io/argo-helm
 helm repo update
 kubectl create namespace argocd  --dry-run=client -o yaml | kubectl apply -f -
-helm upgrade --install argocd platform/argocd/ \
+helm upgrade --install argocd-app platform/argocd/ \
   --namespace argocd \
   -f platform/argocd/values.yaml 
 
@@ -232,6 +232,8 @@ ARGOCD_PASSWORD=$(kubectl -n argocd get secret argocd-initial-admin-secret -o js
 echo "ArgoCD initial admin password: $ARGOCD_PASSWORD"
 
 # enter to UI
-echo "Run: kubectl port-forward svc/vault -n vault 8200:8200"
-echo "Run: kubectl port-forward svc/argocd-server -n argocd 8080:443"
+echo "Now chat your Tailscale admin console, to access vault local address, you need forward port"
+echo "Run: kubectl port-forward svc/vault-app -n vault 8200:8200"
 echo "Check doc/secrets-structure.md for more info, you maybe need configure more secrets"
+echo "To access to argocd local address, you need forward port"
+echo "Run: kubectl port-forward svc/argocd-server -n argocd 8080:443"
