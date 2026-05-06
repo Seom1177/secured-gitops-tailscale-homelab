@@ -8,5 +8,5 @@ metadata:
   labels:
     name: tailscale
   annotations:
-    argocd.argoproj.io/sync-wave: "-5"
+    argocd.argoproj.io/sync-wave: "-3"
 {{- end }}

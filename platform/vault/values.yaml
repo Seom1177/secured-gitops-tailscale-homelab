@@ -9,7 +9,7 @@ vault:
   injector:
     enabled: true
     replicas: 1
-    
+
     resources:
       requests:
         cpu: 50m
@@ -46,7 +46,7 @@ vault:
               secretKeyRef:
                 name: vault-unseal-keys
                 key: key3
-        command: ["/bin/sh", "-c"]
+        command: [ "/bin/sh", "-c" ]
         args:
           - |
             echo "Starting Vault Unsealer loop..."
@@ -66,12 +66,12 @@ vault:
               fi
               sleep 30
             done
-    
+
     # Mount certificates TLS
     extraVolumes:
       - type: secret
         name: vault-tls
-    
+
     resources:
       requests:
         cpu: 500m
@@ -84,10 +84,10 @@ vault:
     standalone:
       enabled: true
       replicas: 1
-      
+
       config: |
         ui = true
-        
+
         listener "tcp" {
           tls_disable = 0
           address = "[::]:8200"
@@ -96,11 +96,11 @@ vault:
           tls_key_file = "/vault/userconfig/vault-tls/tls.key"
           tls_client_ca_file = "/vault/userconfig/vault-tls/ca.crt"
         }
-        
+
         storage "file" {
           path = "/vault/data"
         }
-        
+
         disable_mlock = true
 
     # Custom health endpoint for kubernetes probes
@@ -127,11 +127,3 @@ vault:
   ui:
     enabled: true
     serviceType: ClusterIP
-
-# The Tailscale Ingress resource has sync-wave: "-1" annotation in its template.
-# ArgoCD applies it last (after Tailscale operator is ready), even within this Application.
-tailscale:
-  enabled: true
-
-certificates:
-  enabled: true
