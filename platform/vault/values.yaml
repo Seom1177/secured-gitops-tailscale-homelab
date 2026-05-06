@@ -24,10 +24,10 @@ injector:
 server:
   enabled: true
   
-  # Montar certificados TLS usando extraSecretMounts
-  extraSecretMounts:
-    - secretName: vault-tls
-      mountPath: /vault/userconfig/vault-tls
+  # Montar certificados TLS usando extraVolumes
+  extraVolumes:
+    - type: secret
+      name: vault-tls
   
   resources:
     requests:
