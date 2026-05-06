@@ -1,76 +1,86 @@
-# vault-production-values.yaml
-global:
-  tlsDisable: false
-  fullnameOverride: vault
+# vault-production-values.yaml - HashiCorp Vault Helm Chart
+# Import values for subchart vault - based on OneUptime guide
 
 vault:
-  enabled: true
+  global:
+    enabled: true
+    tlsDisable: false
 
-tailscale:
-  enabled: true
-
-injector:
-  enabled: true
-  replicas: 1
-  
-  resources:
-    requests:
-      cpu: 50m
-      memory: 64Mi
-    limits:
-      cpu: 250m
-      memory: 256Mi
-
-server:
-  enabled: true
-  
-  # Montar certificados TLS usando extraVolumes
-  extraVolumes:
-    - type: secret
-      name: vault-tls
-  
-  resources:
-    requests:
-      cpu: 500m
-      memory: 256Mi
-    limits:
-      cpu: 2000m
-      memory: 1Gi
-
-  # Standalone mode with file storage
-  standalone:
+  injector:
     enabled: true
     replicas: 1
     
-    config: |
-      ui = true
-      
-      listener "tcp" {
-        tls_disable = 0
-        address = "[::]:8200"
-        cluster_address = "[::]:8201"
-        tls_cert_file = "/vault/userconfig/vault-tls/tls.crt"
-        tls_key_file = "/vault/userconfig/vault-tls/tls.key"
-        tls_client_ca_file = "/vault/userconfig/vault-tls/ca.crt"
-      }
-      
-      storage "file" {
-        path = "/vault/data"
-      }
-      
-      disable_mlock = true
+    resources:
+      requests:
+        cpu: 50m
+        memory: 64Mi
+      limits:
+        cpu: 250m
+        memory: 256Mi
 
-  # Persistent storage
-  dataStorage:
+  server:
     enabled: true
-    size: 10Gi
-    storageClass: standard
+    
+    # Mount certificates TLS
+    extraVolumes:
+      - type: secret
+        name: vault-tls
+    
+    volumeMounts:
+      - name: vault-tls
+        mountPath: /vault/userconfig/vault-tls
+        readOnly: true
+    
+    resources:
+      requests:
+        cpu: 500m
+        memory: 256Mi
+      limits:
+        cpu: 2000m
+        memory: 1Gi
 
-  # Audit log storage
-  auditStorage:
+    # Standalone mode with file storage
+    standalone:
+      enabled: true
+      replicas: 1
+      
+      config: |
+        ui = true
+        
+        listener "tcp" {
+          tls_disable = 0
+          address = "[::]:8200"
+          cluster_address = "[::]:8201"
+          tls_cert_file = "/vault/userconfig/vault-tls/tls.crt"
+          tls_key_file = "/vault/userconfig/vault-tls/tls.key"
+          tls_client_ca_file = "/vault/userconfig/vault-tls/ca.crt"
+        }
+        
+        storage "file" {
+          path = "/vault/data"
+        }
+        
+        disable_mlock = true
+
+    # Persistent storage
+    dataStorage:
+      enabled: true
+      size: 10Gi
+      storageClass: standard
+
+    # Audit log storage
+    auditStorage:
+      enabled: true
+      size: 10Gi
+      storageClass: standard
+
+  ui:
     enabled: true
-    size: 10Gi
-    storageClass: standard
+    serviceType: LoadBalancer
 
-ui:
+# Custom templates values
+tailscale:
+  enabled: true
+
+certificates:
   enabled: true
