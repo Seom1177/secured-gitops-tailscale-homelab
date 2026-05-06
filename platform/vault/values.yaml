@@ -24,6 +24,11 @@ injector:
 server:
   enabled: true
   
+  # Montar certificados TLS usando extraSecretMounts
+  extraSecretMounts:
+    - secretName: vault-tls
+      mountPath: /vault/userconfig/vault-tls
+  
   resources:
     requests:
       cpu: 500m
@@ -85,17 +90,6 @@ server:
         #   kms_key_id = "alias/vault-unseal"
         # }
         # disable_mlock = true
-
-  # Mount TLS certificates
-  volumes:
-    - name: vault-tls
-      secret:
-        secretName: vault-tls
-
-  volumeMounts:
-    - name: vault-tls
-      mountPath: /vault/userconfig/vault-tls
-      readOnly: true
 
   # Persistent storage
   dataStorage:
