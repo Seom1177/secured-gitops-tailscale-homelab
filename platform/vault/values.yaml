@@ -21,56 +21,33 @@ vault:
   server:
     enabled: true
 
-    # Auto-unseal sidecar
-    extraContainers:
-      - name: vault-unsealer
-        image: hashicorp/vault:1.21.4
-        imagePullPolicy: IfNotPresent
-        env:
-          - name: VAULT_ADDR
-            value: "https://localhost:8200"
-          - name: VAULT_SKIP_VERIFY
-            value: "true"
-          - name: UNSEAL_KEY_1
-            valueFrom:
-              secretKeyRef:
-                name: vault-unseal-keys
-                key: key1
-          - name: UNSEAL_KEY_2
-            valueFrom:
-              secretKeyRef:
-                name: vault-unseal-keys
-                key: key2
-          - name: UNSEAL_KEY_3
-            valueFrom:
-              secretKeyRef:
-                name: vault-unseal-keys
-                key: key3
-        command: [ "/bin/sh", "-c" ]
-        args:
-          - |
-            echo "Starting Vault Unsealer loop..."
-            while true; do
-              vault status > /dev/null 2>&1
-              STATUS=$?
-              if [ $STATUS -eq 2 ]; then
-                echo "$(date): Vault is sealed. Unsealing..."
-                vault operator unseal $UNSEAL_KEY_1
-                vault operator unseal $UNSEAL_KEY_2
-                vault operator unseal $UNSEAL_KEY_3
-              elif [ $STATUS -eq 0 ]; then
-                # Already unsealed
-                true
-              else
-                echo "$(date): Waiting for Vault to be ready..."
-              fi
-              sleep 30
-            done
+    # Lifecycle hook to unseal Vault on startup (runs once and stops)
+    postStart:
+      - /bin/sh
+      - -c
+      - |
+        # Wait for Vault to be ready to receive commands
+        until vault status -address=https://127.0.0.1:8200 -ca-cert=/vault/userconfig/vault-tls/ca.crt -tls-server-name=vault > /dev/null 2>&1 || [ $? -eq 2 ]; do
+          sleep 2
+        done
+        # Unseal if keys are available
+        if [ -f /vault/unseal/key1 ]; then
+          vault operator unseal -address=https://127.0.0.1:8200 -ca-cert=/vault/userconfig/vault-tls/ca.crt -tls-server-name=vault $(cat /vault/unseal/key1)
+          vault operator unseal -address=https://127.0.0.1:8200 -ca-cert=/vault/userconfig/vault-tls/ca.crt -tls-server-name=vault $(cat /vault/unseal/key2)
+          vault operator unseal -address=https://127.0.0.1:8200 -ca-cert=/vault/userconfig/vault-tls/ca.crt -tls-server-name=vault $(cat /vault/unseal/key3)
+        fi
+
+    extraVolumeMounts:
+      - name: vault-unseal-keys
+        mountPath: /vault/unseal
+        readOnly: true
 
     # Mount certificates TLS
     extraVolumes:
       - type: secret
         name: vault-tls
+      - type: secret
+        name: vault-unseal-keys
 
     resources:
       requests:

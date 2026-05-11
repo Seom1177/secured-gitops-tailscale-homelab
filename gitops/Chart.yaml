@@ -3,10 +3,9 @@ name: gitops
 description: Helm chart for ArgoCD GitOps
 type: application
 version: 2.0.0
-appVersion: "9.5.11"
+appVersion: "9.5.13"
 
 dependencies:
-  - name: argocd
-    version: 9.5.11
+  - name: argo-cd
+    version: 9.5.13
     repository: https://argoproj.github.io/argo-helm
-    condition: argocd.enabled
