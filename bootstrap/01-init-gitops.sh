@@ -4,27 +4,34 @@
 chmod +x infra/init-infra.sh
 ./infra/init-infra.sh
 
-# Install ArgoCD
+# Install ArgoCD Base first (to get CRDs)
 echo "Installing ArgoCD Base..."
 helm dependency build gitops
-helm upgrade --install argocd argo/argo-cd \
+helm upgrade --install argocd gitops \
   --namespace argocd --create-namespace \
-  --set argo-cd.enabled=true \
+  --set platformApps.enabled=false \
   -f gitops/values.yaml
 
 echo "Waiting for ArgoCD CRDs..."
 until kubectl get crd applications.argoproj.io > /dev/null 2>&1; do sleep 2; done
 
+# Install full GitOps (including Apps)
 echo "Installing ArgoCD Apps..."
-helm upgrade --install argocd-app gitops \
+helm upgrade --install argocd gitops \
   --namespace argocd \
+  --set platformApps.enabled=true \
   -f gitops/values.yaml
 
 # Wait for Vault Setup Job
-echo "Waiting for Vault setup Job to complete..."
+echo "Waiting for Vault namespace and setup Job..."
+until kubectl get ns vault > /dev/null 2>&1; do sleep 5; done
+echo "Namespace 'vault' found. Waiting for job/vault-setup to be created..."
+until kubectl get job/vault-setup -n vault > /dev/null 2>&1; do sleep 5; done
 kubectl wait --for=condition=complete job/vault-setup -n vault --timeout=300s
 
 # Seed secrets for Tailscale auth (Interactive)
+echo "Waiting for vault-unseal-keys secret..."
+until kubectl get secret vault-unseal-keys -n vault > /dev/null 2>&1; do sleep 5; done
 ROOT_TOKEN=$(kubectl get secret vault-unseal-keys -n vault -o jsonpath='{.data.root-token}' | base64 -d)
 
 if [ -z "$TS_CLIENT_ID" ] || [ -z "$TS_CLIENT_SECRET" ]; then

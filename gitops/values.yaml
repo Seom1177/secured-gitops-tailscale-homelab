@@ -1,4 +1,7 @@
 # ArgoCD Helm values
+platformApps:
+  enabled: true
+
 argo-cd:
   configs:
     params:
