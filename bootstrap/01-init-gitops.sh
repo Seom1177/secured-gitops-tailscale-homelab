@@ -5,6 +5,17 @@ chmod +x infra/init-infra.sh
 ./infra/init-infra.sh
 
 # Install ArgoCD
+echo "Installing ArgoCD Base..."
+helm dependency build gitops
+helm upgrade --install argocd argo/argo-cd \
+  --namespace argocd --create-namespace \
+  --set argo-cd.enabled=true \
+  -f gitops/values.yaml
+
+echo "Waiting for ArgoCD CRDs..."
+until kubectl get crd applications.argoproj.io > /dev/null 2>&1; do sleep 2; done
+
+echo "Installing ArgoCD Apps..."
 helm upgrade --install argocd-app gitops \
   --namespace argocd \
   -f gitops/values.yaml
