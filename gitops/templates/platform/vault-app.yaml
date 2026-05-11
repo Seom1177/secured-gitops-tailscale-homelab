@@ -1,20 +1,27 @@
 apiVersion: argoproj.io/v1alpha1
 kind: Application
 metadata:
-  name: root-prod-app
+  name: vault-app
   namespace: argocd
+  annotations:
+    argocd.argoproj.io/sync-wave: "1"
 spec:
   project: default
   source:
     repoURL: https://github.com/Seom1177/argocd-gitops-homelab.git
     targetRevision: HEAD
-    path: gitops/prod
+    path: platform/vault
+    helm:
+      valueFiles:
+        - values.yaml
   destination:
     server: https://kubernetes.default.svc
-    namespace: argocd
+    namespace: vault
   syncPolicy:
     automated:
       prune: true
       selfHeal: true
     syncOptions:
-    - CreateNamespace=true
+      - CreateNamespace=true
+      - ServerSideApply=true
+      - Retry=true

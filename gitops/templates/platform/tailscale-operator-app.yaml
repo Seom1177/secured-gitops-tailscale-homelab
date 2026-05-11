@@ -1,27 +1,22 @@
 apiVersion: argoproj.io/v1alpha1
 kind: Application
 metadata:
-  name: cert-manager-sync
+  name: tailscale-operator-sync
   namespace: argocd
   annotations:
-    argocd.argoproj.io/sync-wave: "-7"
+    argocd.argoproj.io/sync-wave: "3"
 spec:
   project: default
   source:
-    chart: cert-manager
-    repoURL: https://charts.jetstack.io
-    targetRevision: v1.17.2
+    repoURL: https://github.com/Seom1177/argocd-gitops-homelab.git
+    targetRevision: HEAD
+    path: platform/tailscale
     helm:
-      releaseName: cert-manager
-      values: |
-        crds:
-          enabled: true
-        global:
-          leaderElection:
-            namespace: cert-manager
+      valueFiles:
+        - values.yaml
   destination:
     server: https://kubernetes.default.svc
-    namespace: cert-manager
+    namespace: tailscale
   syncPolicy:
     automated:
       prune: true

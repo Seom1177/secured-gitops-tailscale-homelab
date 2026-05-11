@@ -1,19 +1,25 @@
 apiVersion: argoproj.io/v1alpha1
 kind: Application
 metadata:
-  name: eso-config-app
+  name: cert-manager-sync
   namespace: argocd
-  annotations:
-    argocd.argoproj.io/sync-wave: "-3"
 spec:
   project: default
   source:
-    repoURL: https://github.com/Seom1177/argocd-gitops-homelab.git
-    targetRevision: HEAD
-    path: platform/external-secrets-config
+    chart: cert-manager
+    repoURL: https://charts.jetstack.io
+    targetRevision: v1.17.2
+    helm:
+      releaseName: cert-manager
+      values: |
+        crds:
+          enabled: true
+        global:
+          leaderElection:
+            namespace: cert-manager
   destination:
     server: https://kubernetes.default.svc
-    namespace: external-secrets
+    namespace: cert-manager
   syncPolicy:
     automated:
       prune: true
