@@ -24,12 +24,12 @@ spec:
   - vault
   - vault.vault.svc
   - vault.vault.svc.cluster.local
-  - vault-app
-  - vault-app.vault.svc
-  - vault-app.vault.svc.cluster.local
-  - vault-internal
-  - vault-internal.vault.svc
-  - vault-internal.vault.svc.cluster.local
+  - {{ .Release.Name }}
+  - {{ .Release.Name }}.vault.svc
+  - {{ .Release.Name }}.vault.svc.cluster.local
+  - {{ .Release.Name }}-internal
+  - {{ .Release.Name }}-internal.vault.svc
+  - {{ .Release.Name }}-internal.vault.svc.cluster.local
   usages:
   - server auth
   - client auth
