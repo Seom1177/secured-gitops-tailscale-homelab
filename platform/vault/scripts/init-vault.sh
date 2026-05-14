@@ -9,12 +9,14 @@ TS_CLIENT_SECRET="ChangeMeSecret"
 echo "Vault: Starting configuration..."
 
 # 1. Wait for Vault pod
-echo "Waiting for Vault pod vault-app-0..."
-until kubectl get pod -n vault vault-app-0 > /dev/null 2>&1; do sleep 5; done
-kubectl wait --for=condition=Ready pod/vault-app-0 -n vault --timeout=300s
+echo "Waiting for Vault pod to be created..."
+until kubectl get pod -n vault -l app.kubernetes.io/name=vault,component=server -o name | grep "pod/"; do sleep 5; done
+VAULT_POD=$(kubectl get pod -n vault -l app.kubernetes.io/name=vault,component=server -o jsonpath="{.items[0].metadata.name}")
+echo "Found Vault pod: $VAULT_POD"
+kubectl wait --for=condition=Ready pod/$VAULT_POD -n vault --timeout=300s
 
 # Helpers for vault exec
-VAULT_EXEC="kubectl exec -i -n vault vault-app-0 -- env VAULT_CACERT=/vault/userconfig/vault-tls/ca.crt vault"
+VAULT_EXEC="kubectl exec -i -n vault $VAULT_POD -- env VAULT_CACERT=/vault/userconfig/vault-tls/ca.crt vault"
 
 # 2. Initialization
 STATUS=$($VAULT_EXEC status -format=json -tls-server-name=vault 2>/dev/null || echo "{\"initialized\":false}")
@@ -51,7 +53,7 @@ fi
 
 # 4. Configure Vault
 ROOT_TOKEN=$(kubectl get secret vault-unseal-keys -n vault -o jsonpath='{.data.root-token}' | base64 -d)
-VAULT_EXEC_AUTH="kubectl exec -i -n vault vault-app-0 -- env VAULT_CACERT=/vault/userconfig/vault-tls/ca.crt VAULT_TOKEN=$ROOT_TOKEN vault"
+VAULT_EXEC_AUTH="kubectl exec -i -n vault $VAULT_POD -- env VAULT_CACERT=/vault/userconfig/vault-tls/ca.crt VAULT_TOKEN=$ROOT_TOKEN vault"
 
 echo "Ensuring KV-v2 engine is enabled at secret/..."
 $VAULT_EXEC_AUTH secrets list -tls-server-name=vault | grep -q "secret/" || \
@@ -63,7 +65,7 @@ $VAULT_EXEC_AUTH auth list -tls-server-name=vault | grep -q "kubernetes/" || \
 
 echo "Configuring Kubernetes auth..."
 K8S_ISSUER=$(kubectl get --raw /.well-known/openid-configuration | jq -r .issuer)
-K8S_CA=$(kubectl exec -n vault vault-app-0 -- cat /var/run/secrets/kubernetes.io/serviceaccount/ca.crt)
+K8S_CA=$(kubectl exec -n vault $VAULT_POD -- cat /var/run/secrets/kubernetes.io/serviceaccount/ca.crt)
 
 $VAULT_EXEC_AUTH write -tls-server-name=vault auth/kubernetes/config \
     kubernetes_host="https://kubernetes.default.svc" \
@@ -79,7 +81,7 @@ EOF
 
 echo "Updating ESO role..."
 $VAULT_EXEC_AUTH write -tls-server-name=vault auth/kubernetes/role/eso-tailscale-role \
-    bound_service_account_names=eso-app-external-secrets \
+    bound_service_account_names=eso-app-external-secrets,eso-app-dev-external-secrets \
     bound_service_account_namespaces=external-secrets \
     policies=tailscale-policy \
     ttl=24h
