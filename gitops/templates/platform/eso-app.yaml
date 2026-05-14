@@ -2,7 +2,7 @@
 apiVersion: argoproj.io/v1alpha1
 kind: Application
 metadata:
-  name: eso-app
+  name: eso-app{{- if .Values.developmentApps.enabled }}-dev{{- end }}
   namespace: argocd
   annotations:
     argocd.argoproj.io/sync-wave: "2"
@@ -10,7 +10,7 @@ spec:
   project: default
   source:
     repoURL: https://github.com/Seom1177/argocd-gitops-homelab.git
-    targetRevision: HEAD
+    targetRevision: {{ if .Values.developmentApps.enabled }}dev{{ else }}main{{ end }}
     path: platform/external-secrets-operator
   destination:
     server: https://kubernetes.default.svc

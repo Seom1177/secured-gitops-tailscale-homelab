@@ -3,4 +3,4 @@ platformApps:
   enabled: true
 
 developmentApps:
-  enabled: false
+  enabled: true

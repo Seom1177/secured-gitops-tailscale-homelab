@@ -18,7 +18,7 @@ helm upgrade --install argocd argo/argo-cd \
   --version $ARGOCD_VERSION \
   --namespace argocd --create-namespace \
   --timeout 30m \
-  -f bootstrap/values-argocd.yaml
+  -f platform/argocd/values.yaml
 
 echo "Waiting for ArgoCD CRDs..."
 until kubectl get crd applications.argoproj.io > /dev/null 2>&1; do sleep 2; done
