@@ -1,6 +1,15 @@
 #!/bin/bash
 set -e
 
+# --- Config env ---
+ENV=${1:-prod}
+VALUES_FILE="gitops/values.yaml"
+
+if [ "$ENV" == "dev" ]; then
+  echo "⚠️  Dev mode ON"
+  VALUES_FILE="gitops/values-dev.yaml"
+fi
+
 # --- ArgoCD Version ---
 ARGOCD_VERSION=9.5.13
 
@@ -27,11 +36,11 @@ echo "Waiting for ArgoCD server to be ready..."
 kubectl rollout status deployment/argocd-server -n argocd --timeout=10m
 
 # --- STEP 2: Install App-of-Apps (platform applications) ---
-echo "Installing GitOps App-of-Apps"
+echo "Installing GitOps App-of-Apps ($ENV)"
 helm upgrade --install gitops gitops \
   --namespace argocd \
   --timeout 30m \
-  -f gitops/values.yaml
+  -f "$VALUES_FILE"
 
 # --- STEP 3: Vault configuration ---
 chmod +x platform/vault/scripts/init-vault.sh

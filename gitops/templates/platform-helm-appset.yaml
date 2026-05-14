@@ -1,0 +1,50 @@
+{{- if .Values.platformApps.enabled }}
+apiVersion: argoproj.io/v1alpha1
+kind: ApplicationSet
+metadata:
+  name: platform-helm-apps
+  namespace: argocd
+spec:
+  generators:
+    - list:
+        elements:
+          {{- range .Values.platformApps.apps }}
+          {{- if .chart }}
+          - name: {{ .name }}
+            namespace: {{ .namespace }}
+            wave: {{ .wave | quote }}
+            chart: {{ .chart }}
+            repoURL: {{ .repoURL }}
+            version: {{ .version }}
+            values: |
+{{ .values | toYaml | nindent 14 }}
+          {{- end }}
+          {{- end }}
+  template:
+    metadata:
+      name: '{{ `{{name}}` }}-app{{- if .Values.developmentApps.enabled }}-dev{{- end }}'
+      namespace: argocd
+      annotations:
+        argocd.argoproj.io/sync-wave: '{{ `{{wave}}` }}'
+    spec:
+      project: default
+      source:
+        chart: '{{ `{{chart}}` }}'
+        repoURL: '{{ `{{repoURL}}` }}'
+        targetRevision: '{{ `{{version}}` }}'
+        helm:
+          releaseName: '{{ `{{name}}` }}'
+          values: |
+{{ `{{values | nindent 12}}` }}
+      destination:
+        server: https://kubernetes.default.svc
+        namespace: '{{ `{{namespace}}` }}'
+      syncPolicy:
+        automated:
+          prune: true
+          selfHeal: true
+        syncOptions:
+          - CreateNamespace=true
+          - ServerSideApply=true
+          - Retry=true
+{{- end }}

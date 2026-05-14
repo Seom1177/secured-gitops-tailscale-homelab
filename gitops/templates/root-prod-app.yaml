@@ -7,7 +7,7 @@ metadata:
 spec:
   project: default
   source:
-    repoURL: https://github.com/Seom1177/argocd-gitops-homelab.git
+    repoURL: {{ .Values.repoURL }}
     targetRevision: {{ if .Values.developmentApps.enabled }}dev{{ else }}main{{ end }}
     path: gitops
     helm:

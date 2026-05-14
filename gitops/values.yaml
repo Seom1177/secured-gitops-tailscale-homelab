@@ -1,6 +1,32 @@
 # App-of-Apps chart values
+repoURL: https://github.com/Seom1177/argocd-gitops-homelab.git
 platformApps:
   enabled: true
+  apps:
+    - name: vault
+      path: platform/vault
+      namespace: vault
+      wave: 1
+    - name: eso
+      path: platform/external-secrets-operator
+      namespace: external-secrets
+      wave: 2
+    - name: tailscale
+      path: platform/tailscale
+      namespace: tailscale
+      wave: 3
+    - name: cert-manager
+      namespace: cert-manager
+      wave: 0
+      chart: cert-manager
+      repoURL: https://charts.jetstack.io
+      version: v1.17.2
+      values:
+        crds:
+          enabled: true
+        global:
+          leaderElection:
+            namespace: cert-manager
 
 developmentApps:
   enabled: false
