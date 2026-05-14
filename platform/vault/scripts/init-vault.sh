@@ -9,7 +9,7 @@ until kubectl get pod -n vault vault-app-0 > /dev/null 2>&1; do sleep 5; done
 kubectl wait --for=condition=Ready pod/vault-app-0 -n vault --timeout=300s
 
 # Helpers for vault exec
-VAULT_EXEC="kubectl exec -n vault vault-app-0 -- env VAULT_CACERT=/vault/userconfig/vault-tls/ca.crt vault"
+VAULT_EXEC="kubectl exec -i -n vault vault-app-0 -- env VAULT_CACERT=/vault/userconfig/vault-tls/ca.crt vault"
 
 # 2. Initialization
 STATUS=$($VAULT_EXEC status -format=json -tls-server-name=vault 2>/dev/null || echo "{\"initialized\":false}")
@@ -46,7 +46,7 @@ fi
 
 # 4. Configure Vault
 ROOT_TOKEN=$(kubectl get secret vault-unseal-keys -n vault -o jsonpath='{.data.root-token}' | base64 -d)
-VAULT_EXEC_AUTH="kubectl exec -n vault vault-app-0 -- env VAULT_CACERT=/vault/userconfig/vault-tls/ca.crt VAULT_TOKEN=$ROOT_TOKEN vault"
+VAULT_EXEC_AUTH="kubectl exec -i -n vault vault-app-0 -- env VAULT_CACERT=/vault/userconfig/vault-tls/ca.crt VAULT_TOKEN=$ROOT_TOKEN vault"
 
 echo "Ensuring KV-v2 engine is enabled at secret/..."
 $VAULT_EXEC_AUTH secrets list -tls-server-name=vault | grep -q "secret/" || \
