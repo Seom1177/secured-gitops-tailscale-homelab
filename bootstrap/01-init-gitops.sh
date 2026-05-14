@@ -1,6 +1,9 @@
 #!/bin/bash
 set -e
 
+# --- ArgoCD Version ---
+ARGOCD_VERSION=9.5.13
+
 # Init infra (storage class)
 chmod +x infra/init-infra.sh
 ./infra/init-infra.sh
@@ -12,7 +15,7 @@ helm repo update
 
 echo "Installing ArgoCD"
 helm upgrade --install argocd argo/argo-cd \
-  --version 9.5.13 \
+  --version $ARGOCD_VERSION \
   --namespace argocd --create-namespace \
   --timeout 30m \
   -f bootstrap/values-argocd.yaml
@@ -39,8 +42,10 @@ ROOT_TOKEN=$(kubectl get secret vault-unseal-keys -n vault -o jsonpath='{.data.r
 ARGOCD_PASSWORD=$(kubectl -n argocd get secret argocd-initial-admin-secret -o jsonpath="{.data.password}" | base64 -d)
 echo "---------------------------------------------------"
 echo "Bootstrap Complete!"
-echo "ArgoCD URL: http://localhost:8080 (port-forward needed)"
+echo "ArgoCD URL: http://localhost:8080 (kubectl port-forward svc/argocd-server -n argocd -p 8080:443)"
 echo "ArgoCD User: admin"
 echo "ArgoCD Password: $ARGOCD_PASSWORD"
+echo "Warning: Change your secrets in the secrets folder, read doc/secrets-structure.md for info"
+echo "Vault UI: http://localhost:8200 (kubectl port-forward svc/vault-app -n vault -p 8200:8200)"
 echo "Vault Root Token: $ROOT_TOKEN"
 echo "---------------------------------------------------"

@@ -1,6 +1,11 @@
 #!/bin/bash
 set -e
 
+# Tailscale Auth Configuration (Required for seeding), 
+# IMPORTANT: Do not commit with your credentials!
+TS_CLIENT_ID="ChangeMeSecret"
+TS_CLIENT_SECRET="ChangeMeSecret"
+
 echo "Vault: Starting configuration..."
 
 # 1. Wait for Vault pod
@@ -79,12 +84,7 @@ $VAULT_EXEC_AUTH write -tls-server-name=vault auth/kubernetes/role/eso-tailscale
     policies=tailscale-policy \
     ttl=24h
 
-# 5. Seed secrets for Tailscale auth (Interactive)
-if [ -z "$TS_CLIENT_ID" ] || [ -z "$TS_CLIENT_SECRET" ]; then
-    read -p "Type Tailscale Client ID: " TS_CLIENT_ID
-    read -sp "Type Tailscale Client Secret (your input will not be shown): " TS_CLIENT_SECRET
-    echo ""
-fi
+# 5. Seed secrets for Tailscale auth
 
 echo "Seeding Tailscale secrets into Vault..."
 $VAULT_EXEC_AUTH kv put -tls-server-name=vault \
