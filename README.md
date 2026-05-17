@@ -70,12 +70,69 @@ If you want to replicate this lab or fork it for your own use:
 3.  **Full Guide**: Read the [Getting Started](doc/getting-started.md) documentation for the step-by-step walkthrough.
 
 
+## 📂 Project Structure
+
+```
+argocd-gitops-homelab/
+├── bootstrap/                  # One-shot init scripts
+│   └── 01-init-gitops.sh       # Bootstraps ArgoCD & points it to this repo
+│
+├── platform/                   # Platform-level components (Helm charts)
+│   ├── argocd/                 # ArgoCD Helm values & config
+│   ├── vault/                  # HashiCorp Vault chart + auto-unseal scripts
+│   ├── external-secrets-operator/  # ESO chart + Vault connection
+│   └── tailscale/              # Tailscale operator for secure ingress
+│
+├── apps/                       # User-facing applications
+│   ├── immich/                 # Photo management app (placeholder)
+│   └── template-pod-tailscale/ # Reusable template: deployment + service + tailscale ingress
+│
+├── gitops/                     # Root "App of Apps" Helm chart
+│   ├── Chart.yaml              # Meta-chart that orchestrates everything
+│   ├── values.yaml             # Production values (env-driven)
+│   ├── values-dev.yaml         # Development overrides
+│   └── templates/              # ApplicationSets & root app definitions
+│
+├── infra/                      # Infrastructure utilities
+│   ├── init-infra.sh           # Node-level setup script
+│   ├── storage/                # Local-path provisioner configs (K3s / Minikube)
+│   └── update/                 # K3s update planning manifests
+│
+├── doc/                        # Step-by-step documentation
+│   ├── getting-started.md      # Full walkthrough
+│   ├── k3s-install.md          # Fedora + Tailscale setup
+│   ├── customization-guide.md  # How to fork & adapt
+│   ├── secrets-structure.md    # Vault secret organization
+│   ├── sync-waves.md           # ArgoCD sync ordering
+│   └── secrets-steps/          # Visual guides for Vault setup
+│
+└── .env                        # Environment variables (gitignored in production)
+```
+
 ## 📈 Roadmap
 
-- [ ] Implement Automated Image Updates (Renovate).
-- [ ] Add Monitoring Stack (Loki / Prometheus / Grafana).
-- [ ] Multi-node HA evaluation using Tailscale.
-- [ ] Integration of Network Policies (Cilium or Calico).
+### Phase 1 — Foundation ✅
+- [X] Bootstrap script for ArgoCD (GitOps entry point).
+- [X] Vault deployment with auto-unseal via ArgoCD.
+- [X] Cert-Manager integration for Vault TLS.
+- [X] External Secrets Operator syncing Vault → K8s secrets.
+- [X] Tailscale operator for secure zero-trust ingress.
+
+### Phase 2 — Automation & Observability 🚧
+- [ ] **Automated Image Updates** — Renovate bot for dependency tracking.
+- [ ] **Monitoring Stack** — Prometheus + Grafana + Loki for full observability.
+- [ ] **Alerting** — AlertManager rules + notification channels.
+
+### Phase 3 — Hardening & Scale 📋
+- [ ] **Network Policies** — Cilium or Calico for pod-level segmentation.
+- [ ] **Multi-node HA** — Evaluate Tailscale-based multi-node K3s topology.
+- [ ] **Backup & DR** — Velero or k8up for cluster state backups.
+- [ ] **Policy Enforcement** — OPA/Gatekeeper or Kyverno for admission control.
+
+### Phase 4 — Developer Experience 💡
+- [ ] **CI/CD Pipeline** — GitHub Actions for lint, test, and preview environments.
+- [ ] **App Template Generator** — Scaffold new apps from `template-pod-tailscale`.
+- [ ] **Documentation Site** — MkDocs or Docusaurus for searchable runbooks.
 
 ---
 *Created by [Seom88](https://github.com/Seom1177) - Built for learning, security, and automation.*
