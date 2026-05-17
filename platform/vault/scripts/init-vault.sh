@@ -67,6 +67,14 @@ fi
 ROOT_TOKEN=$(kubectl get secret "$SECRET_NAME" -n vault -o jsonpath='{.data.root-token}' | base64 -d)
 VAULT_EXEC_AUTH="kubectl exec -i -n vault $VAULT_POD -- env VAULT_CACERT=/vault/userconfig/vault-tls/ca.crt VAULT_TOKEN=$ROOT_TOKEN vault"
 
+# Helper for idempotency
+vault_auth_write() {
+    local path=$1
+    shift
+    echo -e "${YELLOW}  [Vault] Configuring $path...${NC}"
+    $VAULT_EXEC_AUTH write -tls-server-name=vault "$path" "$@" > /dev/null 2>&1
+}
+
 echo -e "${BLUE}  [Vault] Configuring engines and auth...${NC}"
 $VAULT_EXEC_AUTH secrets list -tls-server-name=vault | grep -q "secret/" || \
   $VAULT_EXEC_AUTH secrets enable -path=secret -tls-server-name=vault kv-v2 > /dev/null 2>&1
@@ -77,29 +85,64 @@ $VAULT_EXEC_AUTH auth list -tls-server-name=vault | grep -q "kubernetes/" || \
 K8S_ISSUER=$(kubectl get --raw /.well-known/openid-configuration | jq -r .issuer)
 K8S_CA=$(kubectl exec -n vault $VAULT_POD -- cat /var/run/secrets/kubernetes.io/serviceaccount/ca.crt)
 
-$VAULT_EXEC_AUTH write -tls-server-name=vault auth/kubernetes/config \
+vault_auth_write auth/kubernetes/config \
     kubernetes_host="https://kubernetes.default.svc" \
     kubernetes_ca_cert="$K8S_CA" \
-    issuer="$K8S_ISSUER" > /dev/null 2>&1
+    issuer="$K8S_ISSUER"
 
 # Policies and Roles
+echo -e "${YELLOW}  [Vault] Writing policies...${NC}"
 $VAULT_EXEC_AUTH policy write -tls-server-name=vault tailscale-policy - > /dev/null 2>&1 <<EOF
 path "secret/data/tailscale/*" {
   capabilities = ["read"]
 }
 EOF
 
-$VAULT_EXEC_AUTH write -tls-server-name=vault auth/kubernetes/role/eso-tailscale-role \
+vault_auth_write auth/kubernetes/role/eso-tailscale-role \
     bound_service_account_names=eso-external-secrets,eso-dev-external-secrets \
     bound_service_account_namespaces=external-secrets \
     policies=tailscale-policy \
-    ttl=24h > /dev/null 2>&1
+    ttl=24h
 
 # 5. Seed secrets
-echo -e "${BLUE}  [Vault] Seeding Tailscale secrets...${NC}"
-$VAULT_EXEC_AUTH kv put -tls-server-name=vault \
-    secret/tailscale/auth \
+echo -e "${BLUE}  [Vault] Seeding secrets...${NC}"
+
+# Function to safely patch or create KV secrets
+seed_kv_secret() {
+    local path=$1
+    shift
+    # Check if secret exists
+    if $VAULT_EXEC_AUTH kv get -tls-server-name=vault "$path" > /dev/null 2>&1; then
+        echo -e "${YELLOW}  [Vault] Patching existing secret: $path${NC}"
+        $VAULT_EXEC_AUTH kv patch -tls-server-name=vault "$path" "$@" > /dev/null 2>&1
+    else
+        echo -e "${YELLOW}  [Vault] Creating new secret: $path${NC}"
+        $VAULT_EXEC_AUTH kv put -tls-server-name=vault "$path" "$@" > /dev/null 2>&1
+    fi
+}
+
+# Function to generate a random secret if it doesn't exist
+generate_kv_secret_if_missing() {
+    local path=$1
+    local key=$2
+    local bytes=${3:-24}
+    
+    if $VAULT_EXEC_AUTH kv get -tls-server-name=vault "$path" > /dev/null 2>&1; then
+        echo -e "${GREEN}  [Vault] Secret already exists at $path, skipping generation.${NC}"
+    else
+        echo -e "${YELLOW}  [Vault] Generating random value for $path ($key)...${NC}"
+        # Use Vault's random generator (write/POST is the correct method for this endpoint)
+        local RANDOM_VAL
+        RANDOM_VAL=$($VAULT_EXEC_AUTH write -tls-server-name=vault -format=json sys/tools/random bytes=$bytes | jq -r .data.random_bytes)
+        $VAULT_EXEC_AUTH kv put -tls-server-name=vault "$path" "$key"="$RANDOM_VAL" > /dev/null 2>&1
+    fi
+}
+
+seed_kv_secret secret/tailscale/auth \
     client_id="$TS_CLIENT_ID" \
-    client_secret="$TS_CLIENT_SECRET" > /dev/null 2>&1
+    client_secret="$TS_CLIENT_SECRET"
+
+# Example: Generate random password for Grafana
+generate_kv_secret_if_missing secret/grafana/admin password 32
 
 echo -e "${GREEN}  [Vault] Configuration complete!${NC}"
