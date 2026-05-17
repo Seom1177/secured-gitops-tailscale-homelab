@@ -4,38 +4,33 @@ This guide will walk you through the steps required to personalize this homelab 
 
 ## 1. Update Repository References
 
-ArgoCD needs to know where its source of truth is. By default, it points to the original repository.
+ArgoCD needs to know where its source of truth is. This project uses an **App-of-Apps** pattern driven by Helm values.
 
-### Update ArgoCD Applications (App-of-Apps)
+### Update repoURL
 
-This project follows the **App-of-Apps** pattern. The main entry point is `gitops/root-prod-app.yaml`, which bootstraps the entire cluster. 
+The main entry point is `gitops/templates/root-prod-app.yaml`, which uses the `repoURL` defined in the values files. You **must** update this to point to your fork.
 
-Because many applications in `gitops/prod/` point to Helm charts located within this same repository (local charts), you **must** update the `repoURL` in all manifest files to point to your fork.
+1.  **Production**: Update `repoURL` in `gitops/values.yaml`.
+2.  **Development**: Update `repoURL` in `gitops/values-dev.yaml`.
 
-1.  **Entry Point**: Update the `repoURL` in `gitops/root-prod-app.yaml`.
-2.  **App Definitions**: Update all files under `gitops/prod/` (e.g., `vault-app.yaml`, `eso-app.yaml`, etc.).
-
-You can use this command to update all references at once:
-```bash
-# Replace 'Seom1177' with your GitHub username
-grep -ril "Seom1177/argocd-gitops-homelab" gitops/ | xargs sed -i 's|Seom1177/argocd-gitops-homelab|YOUR_USERNAME/argocd-gitops-homelab|g'
-```
+By default, the `prod` environment targets the `main` branch, while the `dev` environment targets the `dev` branch. You can change this behavior in `gitops/templates/root-prod-app.yaml` and `gitops/templates/platform-local-appset.yaml`.
 
 ## 2. Tailscale Configuration
 
-To use your own Tailscale network, follow these steps:
+This homelab integrates with Tailscale for secure networking. The bootstrap script simplifies the setup:
 
-1.  **Update K3s Config**: When following the [K3s Install Guide](k3s-install.md), ensure you use your specific Tailscale IP and hostnames. This is the foundation of your node identity.
-2.  **Generate an Auth Key**: Go to your Tailscale Admin Console and generate a reusable Auth Key. For more advanced setups, refer to the [official Tailscale Kubernetes Operator documentation](https://tailscale.com/docs/features/kubernetes-operator).
-3.  **Tailscale Operator**: If you use the Tailscale Operator, you will need to provision secrets. Follow the [Secrets Structure tutorial](secrets-structure.md) to manage these via Vault.
+1.  **Auth Credentials**: When running `./bootstrap/01-init-gitops.sh`, it will prompt for a **Tailscale Client ID** and **Secret**. These are used to provision the Tailscale Operator.
+2.  **K3s Config**: If you are using K3s, follow the [K3s Install Guide](k3s-install.md) to ensure nodes are correctly identified in your Tailnet.
+3.  **Operator**: The Tailscale Operator is managed as a platform app. You can find its configuration in `platform/tailscale/`.
+
 
 ## 3. Vault & Secrets Management
 
-This lab relies heavily on HashiCorp Vault for secure secret delivery. To customize it:
+This lab relies heavily on HashiCorp Vault. The setup is mostly automated:
 
-1.  **Initialize Vault**: Follow the steps in the [Getting Started](../doc/getting-started.md) guide.
+1.  **Initialization**: Follow the [Getting Started](../doc/getting-started.md) guide. The bootstrap script handles initialization, unsealing, and basic configuration (KV engine and Kubernetes auth).
 2.  **Secrets Structure**: It is **crucial** to follow the [Secrets Structure guide](secrets-structure.md) to understand how to seed your own credentials (Tailscale, Cloudflare, etc.) into Vault.
-3.  **External Secrets Operator (ESO)**: Update the `ClusterSecretStore` in `platform/external-secrets/` to point to your Vault instance's address.
+3.  **External Secrets Operator (ESO)**: The `ClusterSecretStore` is pre-configured to connect to Vault using the internal Kubernetes service name. No manual updates are required unless you change the Vault deployment namespace or service names.
 
 
 ## 4. Personal Branding

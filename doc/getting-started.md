@@ -12,33 +12,41 @@ This guide provides the steps to initialize the Homelab GitOps environment, incl
 
 ## 1. Bootstrap the Environment
 
-Run the initialization script to configure the foundation of your GitOps flow (Vault, External Secrets, and ArgoCD).
+Run the initialization script to configure the foundation of your GitOps flow (Storage, Vault, External Secrets, and ArgoCD). You can choose between `prod` (default) and `dev` environments.
 
 ```bash
+# For production (default)
 ./bootstrap/01-init-gitops.sh
+
+# For development
+./bootstrap/01-init-gitops.sh dev
 ```
 
 > [!IMPORTANT]
-> This script initializes the Vault operator and sets up the root ArgoCD application. Wait for script to finish before proceeding.
+> - The script will prompt for your **Tailscale Client ID** and **Secret** if they are not already set as environment variables (`TS_CLIENT_ID` and `TS_CLIENT_SECRET`).
+> - It also initializes the Vault operator and sets up the root ArgoCD application. Wait for the script to finish before proceeding.
 
 ## 2. Configure Vault
 
-After initialization, you need to retrieve the root token to access the UI and set up your personal credentials.
+The bootstrap script automatically initializes Vault and configures the necessary secrets engines. 
 
 ### Access Vault UI
 
 1. **Get the root token**:
+   The script prints the root token at the end, but you can always retrieve it manually. Note that the secret name depends on the environment (`vault-unseal-keys` for prod, `vault-dev-unseal-keys` for dev):
    ```bash
+   # Replace 'vault-unseal-keys' if using dev mode
    kubectl -n vault get secret vault-unseal-keys -o jsonpath="{.data.root-token}" | base64 -d && echo ""
    ```
 2. **Start port-forwarding**:
    ```bash
-   kubectl port-forward svc/vault-app -n vault 8200:8200
+   kubectl port-forward svc/vault -n vault 8200:8200
    ```
-3. **Login**: Go to [localhost:8200](https://localhost:8200) and use the token from step 1.
+3. **Login**: Go to [https://localhost:8200](https://localhost:8200) and use the token from step 1.
 
 > [!TIP]
-> Once inside, follow the [Secret Structure guide](secrets-structure.md) to organize your secrets correctly.
+> Once inside, follow the [Secret Structure guide](secrets-structure.md) to organize your secrets correctly. The automation already sets up the `secret/` KV engine.
+
 
 ## 3. Access ArgoCD
 
