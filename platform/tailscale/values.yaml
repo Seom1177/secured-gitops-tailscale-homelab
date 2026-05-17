@@ -13,6 +13,9 @@ tailscale-operator:
           name: operator-oauth
           key: client_secret
 
+development: 
+  enabled: false
+
 # Ingress toggles for services to be exposed via Tailscale
 argocd:
   enabled: true
