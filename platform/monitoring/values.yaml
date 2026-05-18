@@ -56,7 +56,19 @@ kube-prometheus-stack:
         secureJsonData:
           httpHeaderValue1: "fake"
 
-  # Prometheus persistent storage:
+    # Native Ingress configuration for Grafana
+    ingress:
+      enabled: true
+      ingressClassName: tailscale
+      annotations:
+        argocd.argoproj.io/sync-wave: "1"
+      hosts:
+        - grafana
+      tls:
+        - hosts:
+            - grafana
+
+  # Prometheus persistent storage & native Ingress:
   prometheus:
     prometheusSpec:
       retention: 15d
@@ -67,6 +79,21 @@ kube-prometheus-stack:
             resources:
               requests:
                 storage: 10Gi
+
+    # Native Ingress configuration for Prometheus
+    ingress:
+      enabled: true
+      ingressClassName: tailscale
+      annotations:
+        argocd.argoproj.io/sync-wave: "1"
+      hosts:
+        - prometheus
+      paths:
+        - /
+      pathType: Prefix
+      tls:
+        - hosts:
+            - prometheus
 
   # Alertmanager configuration:
   alertmanager:
