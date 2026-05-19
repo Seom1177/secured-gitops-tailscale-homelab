@@ -63,34 +63,54 @@ sudo swapoff -a
 sudo sed -i '/ swap / s/^/#/' /etc/fstab
 ```
 
-## 2. K3s Configuration
-
-To ensure K3s uses Tailscale for internal communication and enables encryption, create the configuration directory and file.
+## 2. Installation
 
 ### Create Configuration
+for more details please refer to [Distributed Multicloud Networking](https://docs.k3s.io/networking/distributed-multicloud)
 
+#### Install control-plane node
 ```bash
 export NODE_TAILSCALE_IP=$(tailscale ip --4)
+export AUTH_KEY="tskey-auth-..."
 
 curl -sfL https://get.k3s.io | INSTALL_K3S_EXEC="server \
-  --flannel-iface=tailscale0 \
-  --advertise-address=${NODE_TAILSCALE_IP} \
+  --vpn-auth=\"name=tailscale,joinKey=$AUTH_KEY\" \
   --node-external-ip=${NODE_TAILSCALE_IP} \
-  --node-ip=${NODE_TAILSCALE_IP} \
   --tls-san=${NODE_TAILSCALE_IP} \
   --secrets-encryption \
   --cluster-init" sh -
 ```
 
-## 3. Installation
-
-Run the K3s installer. It will automatically detect the configuration file created in the previous step.
-
+#### Install control-plane node
 ```bash
-curl -sfL https://get.k3s.io | sudo sh -
+export NODE_TAILSCALE_IP=$(tailscale ip --4)
+export AUTH_KEY="tskey-auth-..."
+
+curl -sfL https://get.k3s.io | INSTALL_K3S_EXEC="server \
+  --vpn-auth=\"name=tailscale,joinKey=$AUTH_KEY\" \
+  --node-external-ip=${NODE_TAILSCALE_IP} \
+  --tls-san=${NODE_TAILSCALE_IP} \
+  --secrets-encryption \
+  --cluster-init" sh -
 ```
 
-## 4. Secrets Encryption Verification
+#### Install worker node
+```bash
+export NODE_TAILSCALE_IP=$(tailscale ip --4)
+export SERVER_IP="100.x.x.x"  # Tailscale IP del control plane node
+export AUTH_KEY="tskey-auth-..."
+export TOKEN="..."  # /var/lib/rancher/k3s/server/node-token (control plane node)
+
+curl -sfL https://get.k3s.io | \
+  K3S_URL="https://$SERVER_IP:6443" \
+  K3S_TOKEN="$TOKEN" \
+  INSTALL_K3S_EXEC="agent \
+    --vpn-auth=\"name=tailscale,joinKey=$AUTH_KEY\" \
+    --node-external-ip=${NODE_TAILSCALE_IP}" \
+  sh -
+```
+
+## 3. Secrets Encryption Verification
 
 K3s uses AES-CBC encryption for secrets at rest when the `secrets-encryption: true` flag is set.
 
@@ -102,7 +122,7 @@ To verify that encryption is active and see the current rotation stage:
 sudo k3s secrets-encrypt status
 ```
 
-## 5. Post-Installation
+## 4. Post-Installation
 
 ### Configure Kubectl Access
 
