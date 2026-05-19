@@ -16,9 +16,10 @@ vault:
       egress:
         # DNS resolution
         - to:
-            - namespaceSelector:
+            - namespaceSelector: {}
+              podSelector:
                 matchLabels:
-                  kubernetes.io/metadata.name: kube-system
+                  k8s-app: kube-dns
           ports:
             - port: 53
               protocol: UDP
@@ -64,11 +65,12 @@ vault:
     networkPolicy:
       enabled: true
       egress:
-        # DNS resolution (CoreDNS in kube-system)
+        # DNS resolution
         - to:
-            - namespaceSelector:
+            - namespaceSelector: {}
+              podSelector:
                 matchLabels:
-                  kubernetes.io/metadata.name: kube-system
+                  k8s-app: kube-dns
           ports:
             - port: 53
               protocol: UDP
@@ -76,12 +78,34 @@ vault:
               protocol: TCP
         # Kubernetes API Server (TokenReview validation)
         - to:
-            - namespaceSelector:
-                matchLabels:
-                  kubernetes.io/metadata.name: kube-system
+            - namespaceSelector: {}
               podSelector:
                 matchLabels:
                   component: kube-apiserver
+          ports:
+            - port: 443
+              protocol: TCP
+            - port: 6443
+              protocol: TCP
+        - to:
+            - ipBlock:
+                cidr: 10.0.0.0/8
+          ports:
+            - port: 443
+              protocol: TCP
+            - port: 6443
+              protocol: TCP
+        - to:
+            - ipBlock:
+                cidr: 172.16.0.0/12
+          ports:
+            - port: 443
+              protocol: TCP
+            - port: 6443
+              protocol: TCP
+        - to:
+            - ipBlock:
+                cidr: 192.168.0.0/16
           ports:
             - port: 443
               protocol: TCP
