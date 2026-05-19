@@ -120,7 +120,7 @@ argocd-gitops-homelab/
 
 ### Phase 2 — Automation & Observability 🚧
 - [ ] **Automated Image Updates** — Renovate bot for dependency tracking.
-- [ ] **Monitoring Stack** — Prometheus + Grafana + Loki for full observability.
+- [X] **Monitoring Stack** — Prometheus + Grafana + Loki for full observability.
 - [ ] **Alerting** — AlertManager rules + notification channels.
 
 ### Phase 3 — Hardening & Scale 📋
@@ -131,8 +131,6 @@ argocd-gitops-homelab/
 
 ### Phase 4 — Developer Experience 💡
 - [ ] **CI/CD Pipeline** — GitHub Actions for lint, test, and preview environments.
-- [ ] **App Template Generator** — Scaffold new apps from `template-pod-tailscale`.
-- [ ] **Documentation Site** — MkDocs or Docusaurus for searchable runbooks.
 
 ---
 *Created by [Seom88](https://github.com/Seom1177) - Built for learning, security, and automation.*
