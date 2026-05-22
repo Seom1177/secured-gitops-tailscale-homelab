@@ -60,6 +60,15 @@ vault:
         - to:
             - namespaceSelector:
                 matchLabels:
+                  kubernetes.io/metadata.name: vault
+          ports:
+            - port: 8200
+              protocol: TCP
+            - port: 8201
+              protocol: TCP
+        - to:
+            - namespaceSelector:
+                matchLabels:
                   kubernetes.io/metadata.name: external-secrets
           ports:
             - port: 8200
@@ -72,6 +81,20 @@ vault:
             - port: 8200
               protocol: TCP
       ingress:
+        - from:
+            - namespaceSelector:
+                matchLabels:
+                  kubernetes.io/metadata.name: vault
+          ports:
+            - port: 8200
+              protocol: TCP
+            - port: 8201
+              protocol: TCP
+        - from:
+            - namespaceSelector: {}
+          ports:
+            - port: 8200
+              protocol: TCP
         - from:
             - namespaceSelector:
                 matchLabels:
@@ -156,10 +179,18 @@ vault:
     readinessProbe:
       enabled: true
       path: "/v1/sys/health?standbyok=true&sealedcode=204&uninitcode=204"
+      initialDelaySeconds: 30
+      periodSeconds: 10
+      timeoutSeconds: 5
+      failureThreshold: 6
 
     livenessProbe:
       enabled: true
       path: "/v1/sys/health?standbyok=true&sealedcode=204&uninitcode=204"
+      initialDelaySeconds: 60
+      periodSeconds: 10
+      timeoutSeconds: 5
+      failureThreshold: 6
 
     dataStorage:
       enabled: true
