@@ -23,15 +23,32 @@ until kubectl get statefulset -n vault -l app.kubernetes.io/name=vault -o name |
 done
 echo -e " ${GREEN}Created!${NC}"
 
-# Wait for all replicas to be ready
-echo -ne "${YELLOW}  [Vault] Waiting for all pods to be ready...${NC}"
+# Wait for all pods to be Running (not Ready — sealed pods won't pass readinessProbe)
+echo -ne "${YELLOW}  [Vault] Waiting for all pods to be running...${NC}"
 DESIRED_REPLICAS=$(kubectl get statefulset -n vault -l app.kubernetes.io/name=vault -o jsonpath='{.items[0].spec.replicas}' 2>/dev/null || echo "0")
-until [ "$(kubectl get statefulset -n vault -l app.kubernetes.io/name=vault -o jsonpath='{.items[0].status.readyReplicas}' 2>/dev/null)" == "$DESIRED_REPLICAS" ] && [ -n "$DESIRED_REPLICAS" ] && [ "$DESIRED_REPLICAS" != "0" ]; do
+RETRY_ERRORS=0
+MAX_ERRORS=3
+while true; do
+    if ! RUNNING_OUTPUT=$(kubectl get pods -n vault -l app.kubernetes.io/name=vault,component=server \
+        --field-selector=status.phase=Running -o name 2>/dev/null); then
+        RETRY_ERRORS=$((RETRY_ERRORS + 1))
+        if [ "$RETRY_ERRORS" -ge "$MAX_ERRORS" ]; then
+            echo -e "\n${RED}  [Vault] Failed to query pod status after $MAX_ERRORS retries${NC}"
+            exit 1
+        fi
+        sleep 2
+        continue
+    fi
+    RETRY_ERRORS=0
+    RUNNING_COUNT=$(echo "$RUNNING_OUTPUT" | grep -c "pod/" || true)
+    DESIRED_REPLICAS=$(kubectl get statefulset -n vault -l app.kubernetes.io/name=vault -o jsonpath='{.items[0].spec.replicas}' 2>/dev/null || echo "0")
+    if [ "$RUNNING_COUNT" -eq "$DESIRED_REPLICAS" ] && [ "$DESIRED_REPLICAS" -gt 0 ]; then
+        break
+    fi
     echo -n "."
     sleep 5
-    DESIRED_REPLICAS=$(kubectl get statefulset -n vault -l app.kubernetes.io/name=vault -o jsonpath='{.items[0].spec.replicas}' 2>/dev/null || echo "0")
 done
-echo -e " ${GREEN}All $DESIRED_REPLICAS pods ready!${NC}"
+echo -e " ${GREEN}All $DESIRED_REPLICAS pods running!${NC}"
 
 VAULT_POD=$(kubectl get pod -n vault -l app.kubernetes.io/name=vault,component=server -o jsonpath="{.items[0].metadata.name}")
 RELEASE_NAME=$(kubectl get pod $VAULT_POD -n vault -o jsonpath="{.metadata.labels['app\.kubernetes\.io/instance']}")
@@ -116,9 +133,9 @@ for POD in $(kubectl get pods -n vault -l app.kubernetes.io/name=vault,component
         KEY2=$(kubectl get secret "$SECRET_NAME" -n vault -o jsonpath='{.data.key2}' | base64 -d)
         KEY3=$(kubectl get secret "$SECRET_NAME" -n vault -o jsonpath='{.data.key3}' | base64 -d)
         
-        vault_exec "$POD" "vault operator unseal -tls-server-name=vault $KEY1" > /dev/null 2>&1
-        vault_exec "$POD" "vault operator unseal -tls-server-name=vault $KEY2" > /dev/null 2>&1
-        vault_exec "$POD" "vault operator unseal -tls-server-name=vault $KEY3" > /dev/null 2>&1
+        retry vault_exec "$POD" "vault operator unseal -tls-server-name=vault $KEY1" > /dev/null 2>&1
+        retry vault_exec "$POD" "vault operator unseal -tls-server-name=vault $KEY2" > /dev/null 2>&1
+        retry vault_exec "$POD" "vault operator unseal -tls-server-name=vault $KEY3" > /dev/null 2>&1
         echo -e "${GREEN}  [Vault] Pod $POD unsealed!${NC}"
     else
         echo -e "${GREEN}  [Vault] Pod $POD is already unsealed.${NC}"
@@ -133,7 +150,7 @@ vault_auth_write() {
     local path=$1
     shift
     echo -e "${YELLOW}  [Vault] Configuring $path...${NC}"
-    retry $VAULT_EXEC_BASE "$VAULT_POD" -- /bin/sh -c "env VAULT_CACERT=/vault/userconfig/vault-tls/ca.crt VAULT_TOKEN=$ROOT_TOKEN vault write -tls-server-name=vault $path $*" > /dev/null 2>&1
+    retry $VAULT_EXEC_BASE "$VAULT_POD" -- env VAULT_CACERT=/vault/userconfig/vault-tls/ca.crt VAULT_TOKEN="$ROOT_TOKEN" vault write -tls-server-name=vault "$path" "$@" > /dev/null 2>&1
 }
 
 echo -e "${BLUE}  [Vault] Configuring engines and auth...${NC}"
@@ -210,5 +227,15 @@ seed_kv_secret secret/tailscale/auth \
 
 # Generate random password for Grafana and include default user
 generate_kv_secret_if_missing secret/grafana/admin password 32 "user=admin"
+
+# 6. Reconcile dependent ArgoCD applications
+echo -e "\n${BLUE}🔄 Syncing and refreshing dependent ArgoCD applications...${NC}"
+for APP in eso-dev monitoring-dev tailscale-dev; do
+    if kubectl get app "$APP" -n argocd >/dev/null 2>&1; then
+        echo -e "${YELLOW}  [ArgoCD] Refreshing and syncing $APP...${NC}"
+        kubectl annotate app "$APP" -n argocd argocd.argoproj.io/refresh=normal --overwrite >/dev/null 2>&1 || true
+        kubectl patch app "$APP" -n argocd --type merge -p '{"operation":{"sync":{"resources":[]}}}' >/dev/null 2>&1 || true
+    fi
+done
 
 echo -e "${GREEN}  [Vault] Configuration complete!${NC}"
