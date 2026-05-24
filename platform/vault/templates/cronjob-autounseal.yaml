@@ -67,5 +67,5 @@ spec:
             - name: script
               configMap:
                 name: vault-autounseal-script
-                defaultMode: 0500
+                defaultMode: 0555
  
