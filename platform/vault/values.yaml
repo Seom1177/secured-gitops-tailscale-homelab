@@ -178,7 +178,7 @@ vault:
 
     readinessProbe:
       enabled: true
-      path: "/v1/sys/health?standbyok=true&sealedcode=204&uninitcode=204"
+      path: "/v1/sys/health?standbyok=true"
       initialDelaySeconds: 30
       periodSeconds: 10
       timeoutSeconds: 5
@@ -186,7 +186,7 @@ vault:
 
     livenessProbe:
       enabled: true
-      path: "/v1/sys/health?standbyok=true&sealedcode=204&uninitcode=204"
+      path: "/v1/sys/health?standbyok=true"
       initialDelaySeconds: 60
       periodSeconds: 10
       timeoutSeconds: 5
