@@ -1,6 +1,9 @@
 development:
   enabled: false
 
+tailscale:
+  enabled: true
+
 # Configuration for the Loki subchart
 loki:
   # Deployment mode: SingleBinary (simple), SimpleScalable (medium), Distributed (large)
