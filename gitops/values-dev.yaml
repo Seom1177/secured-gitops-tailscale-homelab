@@ -7,18 +7,14 @@ platformApps:
       path: platform/vault
       namespace: vault
       wave: 1
-    - name: eso
-      path: platform/external-secrets-operator
-      namespace: external-secrets
-      wave: 2
     - name: tailscale
       path: platform/tailscale
       namespace: tailscale
-      wave: 3
+      wave: 2
     - name: monitoring
       path: platform/monitoring
       namespace: monitoring
-      wave: 4
+      wave: 3
   helm:
     - name: cert-manager
       namespace: cert-manager
@@ -32,6 +28,12 @@ platformApps:
         global:
           leaderElection:
             namespace: cert-manager
+    - name: external-secrets
+      namespace: external-secrets
+      wave: 0
+      chart: external-secrets
+      repoURL: https://charts.external-secrets.io
+      version: 2.4.1
 
 developmentApps:
   enabled: true
