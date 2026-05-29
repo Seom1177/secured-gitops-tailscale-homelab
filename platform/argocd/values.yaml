@@ -1,8 +1,24 @@
+redis-ha:
+  enabled: true
+
+controller:
+  replicas: 1
+
+server:
+  autoscaling:
+    enabled: true
+    minReplicas: 2
+
+repoServer:
+  autoscaling:
+    enabled: true
+    minReplicas: 2
+
+applicationSet:
+  replicas: 2
+
 # ArgoCD Helm chart values
 configs:
-  params:
-    # Disable TLS on the server (TLS is terminated at the ingress/proxy level)
-    server.insecure: true
   cm:
     # Custom health checks
     resource.customizations: |
