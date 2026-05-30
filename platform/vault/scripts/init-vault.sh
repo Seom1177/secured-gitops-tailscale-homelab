@@ -215,7 +215,7 @@ path "secret/data/grafana/*" {
 EOF
 
 vault_auth_write auth/kubernetes/role/eso-role \
-    bound_service_account_names=eso-external-secrets,eso-dev-external-secrets \
+    bound_service_account_names=vault-external-secrets,vault-dev-external-secrets \
     bound_service_account_namespaces=external-secrets \
     policies=tailscale-policy,monitoring-policy \
     ttl=24h
