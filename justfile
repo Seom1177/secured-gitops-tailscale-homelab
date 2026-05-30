@@ -38,9 +38,9 @@ init-infra:
 
 # ── Vault ─────────────────────────────────────
 
-# Initialize Vault (auto-unseal, configure secrets)
+# Bootstrap Vault (init + unseal only; per-service config via PostSync Jobs)
 vault-init:
-    ./platform/vault/scripts/init-vault.sh
+    ./platform/vault/scripts/bootstrap-vault.sh
 
 # ── Port Forwarding ───────────────────────────
 

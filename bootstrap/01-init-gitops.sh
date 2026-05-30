@@ -22,20 +22,6 @@ if [ "$ENV" == "dev" ]; then
   VALUES_FILE="gitops/values-dev.yaml"
 fi
 
-echo -e "\n${BOLD}🔐 Vault Secrets Setup${NC}"
-if [ -z "$TS_CLIENT_ID" ] || [ "$TS_CLIENT_ID" == "ChangeMeSecret" ]; then
-    echo -ne "${YELLOW}👉 Enter Tailscale Client ID: ${NC}"
-    read TS_CLIENT_ID
-    export TS_CLIENT_ID
-fi
-
-if [ -z "$TS_CLIENT_SECRET" ] || [ "$TS_CLIENT_SECRET" == "ChangeMeSecret" ]; then
-    echo -ne "${YELLOW}👉 Enter Tailscale Client Secret (hidden): ${NC}"
-    read -s TS_CLIENT_SECRET
-    echo ""
-    export TS_CLIENT_SECRET
-fi
-
 # --- ArgoCD Version ---
 ARGOCD_VERSION=9.5.13
 
@@ -71,8 +57,8 @@ helm upgrade --install gitops gitops \
 
 # --- STEP 3: Vault configuration ---
 echo -e "\n${BLUE}🔑 Configuring Hashicorp Vault...${NC}"
-chmod +x platform/vault/scripts/init-vault.sh
-./platform/vault/scripts/init-vault.sh
+chmod +x platform/vault/scripts/bootstrap-vault.sh
+./platform/vault/scripts/bootstrap-vault.sh
 
 # Final Info
 VAULT_POD=$(kubectl get pod -n vault -l app.kubernetes.io/name=vault,component=server -o jsonpath="{.items[0].metadata.name}" 2>/dev/null || echo "")
