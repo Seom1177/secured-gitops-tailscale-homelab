@@ -54,8 +54,7 @@ loki:
 
     storage_config:
       filesystem:
-        chunks_directory: /var/loki/chunks
-        rules_directory: /var/loki/rules
+        directory: /var/loki/chunks
 
   # Enable gateway (default is true, but we ensure it)
   gateway:
