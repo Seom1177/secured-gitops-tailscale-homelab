@@ -7,13 +7,13 @@ platformApps:
       path: platform/vault
       namespace: vault
       wave: 1
-    - name: tailscale
-      path: platform/tailscale
-      namespace: tailscale
-      wave: 2
     - name: monitoring
       path: platform/monitoring
       namespace: monitoring
+      wave: 2
+    - name: tailscale
+      path: platform/tailscale
+      namespace: tailscale
       wave: 3
   helm:
     - name: cert-manager
